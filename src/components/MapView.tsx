@@ -1,12 +1,12 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { CircleMarker, MapContainer, Polygon, TileLayer, ZoomControl, useMap } from "react-leaflet";
 import type { LatLngExpression } from "leaflet";
 import LayerSwitcher from "./LayerSwitcher";
 import { BASEMAPS, type BasemapId } from "@/lib/basemaps";
-import type { LonLat } from "@/lib/types";
+import type { Parcel } from "@/lib/types";
 
 const INDONESIA_CENTER: LatLngExpression = [-2.5, 118];
 
@@ -22,18 +22,14 @@ function FitToRing({ positions }: { positions: LatLngExpression[] }) {
   return null;
 }
 
-export default function MapView({ ring }: { ring: LonLat[] | null }) {
+export default function MapView({ parcels }: { parcels: Parcel[] }) {
   const [basemapId, setBasemapId] = useState<BasemapId>("satelit");
   const basemap = BASEMAPS.find((b) => b.id === basemapId) ?? BASEMAPS[0];
 
-  const positions: LatLngExpression[] = (ring ?? []).map(([lon, lat]) => [lat, lon]);
-  const centroidPos: LatLngExpression | null =
-    positions.length > 0
-      ? [
-          positions.reduce((s, p) => s + (p as [number, number])[0], 0) / positions.length,
-          positions.reduce((s, p) => s + (p as [number, number])[1], 0) / positions.length,
-        ]
-      : null;
+  const allPositions = useMemo<LatLngExpression[]>(
+    () => parcels.flatMap((p) => p.ring.map(([lon, lat]) => [lat, lon] as LatLngExpression)),
+    [parcels]
+  );
 
   return (
     <div className="relative h-full w-full">
@@ -56,22 +52,30 @@ export default function MapView({ ring }: { ring: LonLat[] | null }) {
           />
         ))}
 
-        {positions.length > 0 && (
-          <>
-            <Polygon
-              positions={positions}
-              pathOptions={{ color: "#f59e0b", weight: 3, fillColor: "#f59e0b", fillOpacity: 0.22 }}
-            />
-            {centroidPos && (
-              <CircleMarker
-                center={centroidPos}
-                radius={5}
-                pathOptions={{ color: "#ffffff", weight: 2, fillColor: "#f97316", fillOpacity: 1 }}
+        {parcels.map((parcel) => {
+          const positions: LatLngExpression[] = parcel.ring.map(([lon, lat]) => [lat, lon]);
+          const [cLon, cLat] = parcel.stats.centroid;
+          return (
+            <Fragment key={parcel.id}>
+              <Polygon
+                positions={positions}
+                pathOptions={{
+                  color: parcel.color,
+                  weight: 3,
+                  fillColor: parcel.color,
+                  fillOpacity: 0.22,
+                }}
               />
-            )}
-            <FitToRing positions={positions} />
-          </>
-        )}
+              <CircleMarker
+                center={[cLat, cLon]}
+                radius={5}
+                pathOptions={{ color: "#ffffff", weight: 2, fillColor: parcel.color, fillOpacity: 1 }}
+              />
+            </Fragment>
+          );
+        })}
+
+        {allPositions.length > 0 && <FitToRing positions={allPositions} />}
       </MapContainer>
 
       <LayerSwitcher active={basemapId} onChange={setBasemapId} />

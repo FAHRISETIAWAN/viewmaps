@@ -2,35 +2,42 @@
 
 import { useState } from "react";
 import { MapPin, Sparkles } from "lucide-react";
-import { parseBoundary, SAMPLE_BOUNDARY } from "@/lib/parseBoundary";
+import { parseBoundary, SAMPLE_BOUNDARIES } from "@/lib/parseBoundary";
 import type { CoordOrder, LonLat } from "@/lib/types";
 
 export default function Topbar({
-  onResult,
+  onAdd,
 }: {
-  onResult: (ring: LonLat[] | null) => void;
+  onAdd: (ring: LonLat[]) => void;
 }) {
   const [text, setText] = useState("");
   const [order, setOrder] = useState<CoordOrder>("lonlat");
   const [error, setError] = useState<string | null>(null);
+  const [sampleIndex, setSampleIndex] = useState(0);
 
   function handleSubmit() {
     const { ring, error } = parseBoundary(text, order);
     if (error || ring.length < 4) {
       setError(error ?? "Titik koordinat kurang dari 3.");
-      onResult(null);
       return;
     }
     setError(null);
-    onResult(ring);
+    setText("");
+    onAdd(ring);
   }
 
   function handleSample() {
-    setText(SAMPLE_BOUNDARY);
+    const sample = SAMPLE_BOUNDARIES[sampleIndex % SAMPLE_BOUNDARIES.length];
+    setSampleIndex((i) => i + 1);
+    const { ring, error } = parseBoundary(sample, "lonlat");
+    if (error || ring.length < 4) {
+      setError(error ?? "Titik koordinat kurang dari 3.");
+      return;
+    }
+    setError(null);
+    setText("");
     setOrder("lonlat");
-    const { ring, error } = parseBoundary(SAMPLE_BOUNDARY, "lonlat");
-    setError(error ?? null);
-    onResult(error ? null : ring);
+    onAdd(ring);
   }
 
   return (
@@ -61,12 +68,12 @@ export default function Topbar({
             onClick={handleSubmit}
             className="flex-1 shrink-0 rounded-2xl bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-neutral-800 sm:flex-none"
           >
-            Tampilkan
+            Tambahkan
           </button>
 
           <button
             onClick={handleSample}
-            title="Muat contoh batas"
+            title="Tambah bidang contoh"
             className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-white px-3 py-2.5 text-sm font-medium text-neutral-500 shadow-sm ring-1 ring-black/5 hover:text-neutral-700"
           >
             <Sparkles className="h-4 w-4" strokeWidth={2} />

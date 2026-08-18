@@ -16,6 +16,12 @@ export interface BoundaryData {
   stats: BoundaryStats;
 }
 
+export interface Parcel extends BoundaryData {
+  id: string;
+  label: string;
+  color: string;
+}
+
 export interface GeocodeResult {
   displayName: string;
   village?: string;
